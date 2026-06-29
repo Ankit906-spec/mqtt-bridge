@@ -15,26 +15,40 @@ client.on("connect", () => {
   console.log("Connected to HiveMQ");
 });
 
-// ✅ ROOT GET HANDLER — added here, right before /order
+client.on("error", (err) => {
+  console.log("MQTT Error: " + err);
+});
+
 app.get("/", (req, res) => {
-  res.send("Server is up!");
+  res.send("Restaurant Robot Server is running!");
 });
 
 app.post("/order", (req, res) => {
-  console.log("Order API was called");
-  console.log(req.body);
-  client.publish(process.env.MQTT_TOPIC, "F");
-  console.log("Published: F");
+  console.log("Order received:", req.body);
+
+  const table_id = req.body.table_id;
+  const menu = req.body.menu;
+
+  if (!table_id) {
+    return res.status(400).send("Missing table_id");
+  }
+
+  const payload = JSON.stringify({
+    table_id: table_id,
+    menu: menu
+  });
+
+  client.publish(process.env.MQTT_TOPIC, payload);
+  console.log("Published to MQTT:", payload);
   res.send("OK");
 });
 
 app.post("/stop", (req, res) => {
-  console.log("Stop API was called");
-  client.publish(process.env.MQTT_TOPIC, "S");
-  console.log("Published: S");
+  client.publish(process.env.MQTT_TOPIC, JSON.stringify({ command: "stop" }));
+  console.log("Stop command sent");
   res.send("STOP");
 });
 
 app.listen(process.env.PORT || 10000, () => {
-  console.log("Server Running");
+  console.log("Server Running on port " + (process.env.PORT || 10000));
 });
